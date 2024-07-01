@@ -218,18 +218,17 @@
     }
 
     async function saveScore(name, score) {
-        try {
-            await client.query(
-                q.Create(
-                    q.Collection('leaderboard'),
-                    { data: { name, score } }
-                )
-            );
-        } catch (error) {
-            console.error('Erreur lors de la sauvegarde du score dans FaunaDB:', error);
-            throw error;
-        }
-    }
+  try {
+    console.log('Attempting to save score...');
+    const result = await client.query(
+      q.Get(q.Ref(q.Collection('leaderboard'), '1234567890'))
+    );
+    console.log('Query result:', result);
+  } catch (error) {
+    console.error('FaunaDB query error:', error);
+    throw error;
+  }
+}
 
     async function updateLeaderboard() {
         try {
