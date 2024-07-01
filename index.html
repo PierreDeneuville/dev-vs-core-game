@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dev O&R vs Core: La Course au Code</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        .game-container {
+            border: 1px solid #ccc;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .status {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .status div {
+            flex: 1;
+        }
+        button {
+            background-color: #4CAF50;
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .alert {
+            background-color: #f44336;
+            color: white;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 5px;
+        }
+        #leaderboard {
+            margin-top: 20px;
+            text-align: left;
+        }
+        #leaderboard h2 {
+            text-align: center;
+        }
+        #leaderboard ol {
+            padding-left: 20px;
+        }
+        #nameInput {
+            margin-top: 10px;
+            padding: 5px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Dev O&R vs Core: La Course au Code</h1>
+    
+    <div class="game-container">
+        <div class="status">
+            <div>
+                <h2>Vous (Dev O&R)</h2>
+                <p>Features: <span id="features">0</span>/<span id="featuresNeeded">5</span></p>
+            </div>
+            <div>
+                <h2>Core</h2>
+                <p>Migrations: <span id="migrations">0</span>/10</p>
+            </div>
+        </div>
+        <p>Score: <span id="score">0</span></p>
+        <p>Niveau: <span id="level">1</span></p>
+        <p>Vitesse des migrations: <span id="migrationSpeed">1.00</span> secondes</p>
+        <button id="codeButton">Coder une feature</button>
+    </div>
+
+    <div id="gameOver" class="alert" style="display: none;"></div>
+    <input type="text" id="nameInput" placeholder="Entrez votre nom" style="display: none;">
+    <button id="submitScore" style="display: none;">Enregistrer le score</button>
+    <button id="restartButton" style="display: none;">Rejouer</button>
+
+    <div id="leaderboard">
+        <h2>Leaderboard</h2>
+        <ol id="leaderboardList"></ol>
+    </div>
+
+    <div>
+        <h3>Comment jouer :</h3>
+        <ul style="text-align: left;">
+            <li>Cliquez sur "Coder une feature" pour ajouter des features</li>
+            <li>Core lance automatiquement des migrations de plus en plus rapidement</li>
+            <li>Complétez chaque niveau en atteignant le nombre requis de features</li>
+            <li>Le jeu se termine si Core lance 10 migrations avant que vous n'ayez terminé le niveau</li>
+        </ul>
+    </div>
+
+    <script>
+        let features = 0;
+        let migrations = 0;
+        let gameOver = false;
+        let level = 1;
+        let score = 0;
+        let migrationSpeed = 1000; // 1 seconde au départ
+        let migrationInterval;
+        let leaderboard = [];
+
+        const featuresNeededToWin = () => level * 5;
+        const migrationsToLose = 10;
+
+        function updateDisplay() {
+            document.getElementById('features').textContent = features;
+            document.getElementById('featuresNeeded').textContent = featuresNeededToWin();
+            document.getElementById('migrations').textContent = migrations;
+            document.getElementById('score').textContent = score;
+            document.getElementById('level').textContent = level;
+            document.getElementById('migrationSpeed').textContent = (migrationSpeed / 1000).toFixed(2);
+        }
+
+        function handleCoding() {
+            if (!gameOver) {
+                features++;
+                score += 10;
+                if (features >= featuresNeededToWin()) {
+                    nextLevel();
+                }
+                updateDisplay();
+            }
+        }
+
+        function nextLevel() {
+            level++;
+            features = 0;
+            migrations = 0;
+            migrationSpeed = Math.max(migrationSpeed * 0.8, 200);
+            score += 100 * level;
+            clearInterval(migrationInterval);
+            startMigrations();
+            updateDisplay();
+        }
+
+        function endGame(win) {
+            gameOver = true;
+            clearInterval(migrationInterval);
+            const message = win 
+                ? `Victoire ! Vous avez atteint le niveau ${level} avec un score de ${score} !`
+                : `Game Over! Core a lancé trop de migrations. Score final : ${score}`;
+            document.getElementById('gameOver').textContent = message;
+            document.getElementById('gameOver').style.display = 'block';
+            document.getElementById('codeButton').disabled = true;
+            document.getElementById('nameInput').style.display = 'inline-block';
+            document.getElementById('submitScore').style.display = 'inline-block';
+        }
+
+        function restartGame() {
+            features = 0;
+            migrations = 0;
+            gameOver = false;
+            level = 1;
+            score = 0;
+            migrationSpeed = 1000;
+            document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('codeButton').disabled = false;
+            document.getElementById('restartButton').style.display = 'none';
+            document.getElementById('nameInput').style.display = 'none';
+            document.getElementById('submitScore').style.display = 'none';
+            clearInterval(migrationInterval);
+            startMigrations();
+            updateDisplay();
+        }
+
+        function startMigrations() {
+            migrationInterval = setInterval(() => {
+                if (!gameOver) {
+                    migrations++;
+                    if (migrations >= migrationsToLose) {
+                        endGame(false);
+                    }
+                    updateDisplay();
+                }
+            }, migrationSpeed);
+        }
+
+        function submitScore() {
+            const name = document.getElementById('nameInput').value.trim();
+            if (name) {
+                leaderboard.push({ name, score });
+                leaderboard.sort((a, b) => b.score - a.score);
+                leaderboard = leaderboard.slice(0, 10); // Keep only top 10
+                updateLeaderboard();
+                document.getElementById('nameInput').style.display = 'none';
+                document.getElementById('submitScore').style.display = 'none';
+                document.getElementById('restartButton').style.display = 'inline-block';
+            }
+        }
+
+        function updateLeaderboard() {
+            const leaderboardList = document.getElementById('leaderboardList');
+            leaderboardList.innerHTML = '';
+            leaderboard.forEach(entry => {
+                const li = document.createElement('li');
+                li.textContent = `${entry.name}: ${entry.score}`;
+                leaderboardList.appendChild(li);
+            });
+        }
+
+        document.getElementById('codeButton').addEventListener('click', handleCoding);
+        document.getElementById('restartButton').addEventListener('click', restartGame);
+        document.getElementById('submitScore').addEventListener('click', submitScore);
+
+        startMigrations();
+        updateDisplay();
+        updateLeaderboard();
+    </script>
+</body>
+</html>
