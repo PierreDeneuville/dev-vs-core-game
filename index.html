@@ -66,6 +66,7 @@
             font-size: 16px;
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/faunadb@latest/dist/faunadb.js"></script>
 </head>
 <body>
     <h1>Dev O&R vs Core: La Course au Code</h1>
@@ -108,6 +109,11 @@
     </div>
 
     <script>
+        const q = faunadb.query;
+        const client = new faunadb.Client({
+        secret: 'FAUNA_SECRET' // Remplacez par votre vraie clé FaunaDB
+    });
+
         let features = 0;
         let migrations = 0;
         let gameOver = false;
@@ -193,20 +199,54 @@
             }, migrationSpeed);
         }
 
-        function submitScore() {
-            const name = document.getElementById('nameInput').value.trim();
-            if (name) {
-                leaderboard.push({ name, score });
-                leaderboard.sort((a, b) => b.score - a.score);
-                leaderboard = leaderboard.slice(0, 10); // Keep only top 10
-                updateLeaderboard();
+        async function submitScore() {
+        const name = document.getElementById('nameInput').value.trim();
+        if (name) {
+            try {
+                console.log('Tentative de sauvegarde du score:', name, score);
+                await saveScore(name, score);
+                console.log('Score sauvegardé avec succès');
+                await updateLeaderboard();
+                console.log('Leaderboard mis à jour');
                 document.getElementById('nameInput').style.display = 'none';
                 document.getElementById('submitScore').style.display = 'none';
                 document.getElementById('restartButton').style.display = 'inline-block';
+            } catch (error) {
+                console.error('Erreur lors de la sauvegarde du score:', error);
             }
         }
+    }
 
-        function updateLeaderboard() {
+    async function saveScore(name, score) {
+        try {
+            await client.query(
+                q.Create(
+                    q.Collection('leaderboard'),
+                    { data: { name, score } }
+                )
+            );
+        } catch (error) {
+            console.error('Erreur lors de la sauvegarde du score dans FaunaDB:', error);
+            throw error;
+        }
+    }
+
+    async function updateLeaderboard() {
+        try {
+            const result = await client.query(
+                q.Map(
+                    q.Paginate(q.Documents(q.Collection('leaderboard')), { size: 10 }),
+                    q.Lambda('X', q.Get(q.Var('X')))
+                )
+            );
+
+            leaderboard = result.data.map(item => ({
+                name: item.data.name,
+                score: item.data.score,
+            }));
+
+            leaderboard.sort((a, b) => b.score - a.score);
+
             const leaderboardList = document.getElementById('leaderboardList');
             leaderboardList.innerHTML = '';
             leaderboard.forEach(entry => {
@@ -214,15 +254,18 @@
                 li.textContent = `${entry.name}: ${entry.score}`;
                 leaderboardList.appendChild(li);
             });
+        } catch (error) {
+            console.error('Erreur lors de la récupération du leaderboard:', error);
         }
+    }
 
-        document.getElementById('codeButton').addEventListener('click', handleCoding);
-        document.getElementById('restartButton').addEventListener('click', restartGame);
-        document.getElementById('submitScore').addEventListener('click', submitScore);
+    document.getElementById('codeButton').addEventListener('click', handleCoding);
+    document.getElementById('restartButton').addEventListener('click', restartGame);
+    document.getElementById('submitScore').addEventListener('click', submitScore);
 
-        startMigrations();
-        updateDisplay();
-        updateLeaderboard();
+    startMigrations();
+    updateDisplay();
+    updateLeaderboard();
     </script>
 </body>
 </html>
